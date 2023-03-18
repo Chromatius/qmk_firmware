@@ -16,6 +16,7 @@
 #include QMK_KEYBOARD_H
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "keymap_swedish.h"
 
 
@@ -68,8 +69,6 @@
 #define KC_PC_COPY LCTL(KC_C)
 #define KC_PC_PASTE LCTL(KC_V)
 #define KC_MAC_DOLLAR LALT(KC_4)
-
- char wpm_str[10];
 
  enum layers {
      _WORKMAN = 0,
@@ -176,7 +175,7 @@
 
      [_MEDIA] = LAYOUT(
          KC_NO,   KC_NO,   KC_NO,   KC_NO,    KC_NO,   KC_NO,                                  KC_NO,             KC_NO,        KC_MSTP,     KC_MPLY,    KC_NO,       KC_NO,
-         _______, KC_LGUI, KC_LALT, KC_LCTL, KC_LSFT, KC_NO,                                  KC_NO,             KC_MPRV,      KC_MRWD,     KC_MFFD,    KC_MNXT,     KC_NO,
+         _______, KC_LGUI, KC_LALT, KC_LCTL,  KC_LSFT, KC_NO,                                  KC_NO,             KC_MPRV,      KC_MRWD,     KC_MFFD,    KC_MNXT,     KC_NO,
          KC_NO,   KC_NO,   KC_NO,   KC_NO,    KC_NO,   KC_NO,  KC_NO,  KC_NO,  KC_NO, KC_NO,   KC_NO,             KC_NO,        KC_NO,       KC_NO,      KC_NO,       KC_NO,
                                     KC_NO,    KC_NO,   KC_NO, _______, KC_NO,  KC_NO, _______, KC_NO,             KC_NO,        KC_NO
          ),
@@ -210,12 +209,6 @@
  * DO NOT edit the rev1.c file; instead override the weakly defined default functions by your own.
  */
 
-
- #ifdef OLED_DRIVER_ENABLE
-oled_rotation_t oled_init_user(oled_rotation_t rotation) {
-    return OLED_ROTATION_180;
-}
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
 
@@ -234,8 +227,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         */
 
         if (record->tap.count > 0) {
-            if (get_mods() & MOD_BIT(KC_LSHIFT)) {
-                unregister_mods(MOD_BIT(KC_LSHIFT));
+            if (get_mods() & MOD_BIT(KC_LSFT)) {
+                unregister_mods(MOD_BIT(KC_LSFT));
                 /*
                 Only send keys on the press event. Without this
                 I would get 'thth' instead of 'th' on a press-release cycle.
@@ -244,7 +237,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     tap_code(KC_T);
                     tap_code(KC_H);
                 }
-                add_mods(MOD_BIT(KC_LSHIFT));
+                add_mods(MOD_BIT(KC_LSFT));
                 return false;
             }
         }
@@ -280,13 +273,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         */
 
         if (record->tap.count > 0) {
-            if (get_mods() & MOD_BIT(KC_RCTRL)) {
-                unregister_mods(MOD_BIT(KC_RCTRL));
+            if (get_mods() & MOD_BIT(KC_RCTL)) {
+                unregister_mods(MOD_BIT(KC_RCTL));
                 if (record->event.pressed) {
                     tap_code(KC_E);
                     tap_code(KC_N);
                 }
-                add_mods(MOD_BIT(KC_RCTRL));
+                add_mods(MOD_BIT(KC_RCTL));
                 return false;
             }
         }
@@ -297,6 +290,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 };
 
+
+oled_rotation_t oled_init_user(oled_rotation_t rotation) {
+    return OLED_ROTATION_180;
+}
 
 static void render_enso(void) {
     static const char PROGMEM enso[] = {
@@ -361,12 +358,12 @@ static void render_status(void) {
     // Print some blank lines to remove the previous layer string
     oled_set_cursor(0, 6);
     oled_write_P(PSTR("          "), false);
-    switch (get_highest_layer(layer_state)) {
+    switch (get_highest_layer(layer_state|default_layer_state)) {
             // Note that PSTR is a macro that saves a string to disk memory instead of RAM, and it only takes string literals,
             // so it does not work to refactor the string into a variable and re-use it in two places.
         case _WORKMAN:
-            center_cursor("Layer: Base\n", 6);
-            oled_write_P(PSTR("Layer: Base\n"), false);
+            center_cursor("Layer: Work\n", 6);
+            oled_write_P(PSTR("Layer: Work\n"), false);
             break;
         case _GAMING:
             center_cursor("Layer: Gaming\n", 6);
@@ -377,8 +374,8 @@ static void render_status(void) {
             oled_write_P(PSTR("Layer: Qwerty\n"), false);
             break;
         case _WORKMANMAC:
-            center_cursor("Layer: BaseMac\n", 6);
-            oled_write_P(PSTR("Layer: BaseMac\n"), false);
+            center_cursor("Layer: WorkMac\n", 6);
+            oled_write_P(PSTR("Layer: WorkMac\n"), false);
             break;
         case _SYMBOLSLEFT:
             center_cursor("Layer: SymL\n", 6);
@@ -450,17 +447,15 @@ static void render_status(void) {
 
 }
 
-
-void oled_task_user(void) {
+#ifdef OLED_ENABLE
+bool oled_task_user(void) {
     if (is_keyboard_master()) {
         render_status();
     } else {
         render_enso();
         oled_set_cursor(0, 6);
-        sprintf(wpm_str, "       WPM: %03d", get_current_wpm() / 2);
-        oled_write(wpm_str, false);
-
     }
+    return false;
 }
 #endif
 
